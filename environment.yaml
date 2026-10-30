@@ -9,9 +9,9 @@ dependencies:
   - polars
   - scipy
   - scikit-image
-  - pyqt
+  - pyqt6
   - pip
-  - napari==0.8.0
+  - napari=0.8.0
   - aicspylibczi
   - pyclesperanto
   - ocl_icd_wrapper_apple

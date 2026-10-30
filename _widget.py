@@ -299,15 +299,16 @@ class CellFilterWidget(QWidget):
             self.local_df.drop("_id", "type").write_csv(path)
 
 
-def load_mask_file(path: Path):
+def load_mask_file(path: Path, fluor="AF488"):
     out = np.load(path)
     mask = out["mask"]
     czi_path = Path(out["path"].item())
+    mac_path = Path("/Volumes/DoeLab65TB/") / Path(*czi_path.parts[3:])
     scene = out["scene"].item()
-    viewer = ns.get_viewer_from_file(czi_path, scene)
+    viewer = ns.get_viewer_from_file(mac_path, scene)
+    images = viewer.layers
     scale = viewer.layers[0].scale
-    raw = np.load("cropped.npy")
-    images = viewer.add_image(raw, channel_axis=0, scale=scale)
     labels = viewer.add_labels(mask, name="labels", scale=scale)
-    self = CellFilterWidget(viewer, labels=labels, nuc_gfp=images[0], tf_stains=images[1:])
+    self = CellFilterWidget(viewer, labels=labels, nuc_gfp=images[f"raw-{fluor}-channel"], tf_stains=images)
     viewer.window.add_dock_widget(self)
+    return self.local_df.select("z", "y", "x", "type").rename({"type": "cell_type"})
