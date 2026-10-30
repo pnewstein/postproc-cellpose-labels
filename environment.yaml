@@ -15,5 +15,6 @@ dependencies:
   - aicspylibczi
   - pyclesperanto
   - ocl_icd_wrapper_apple
+  - pyarrow
   - pip:
       - git+https://github.com/pnewstein/napari-scripts.git
