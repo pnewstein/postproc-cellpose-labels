@@ -1,5 +1,6 @@
 import colorsys
 from itertools import combinations
+from pathlib import Path
 
 import numpy as np
 import polars as pl
@@ -21,6 +22,8 @@ import pyclesperanto as cle
 from skimage.measure import regionprops_table, regionprops
 from skimage.filters import gaussian, threshold_otsu
 from scipy import ndimage as ndi
+
+import napari_scripts as ns
 
 ZYX = list("zyx")
 
@@ -294,3 +297,17 @@ class CellFilterWidget(QWidget):
         )
         if path:
             self.local_df.drop("_id", "type").write_csv(path)
+
+
+def load_mask_file(path: Path):
+    out = np.load(path)
+    mask = out["mask"]
+    czi_path = Path(out["path"].item())
+    scene = out["scene"].item()
+    viewer = ns.get_viewer_from_file(czi_path, scene)
+    scale = viewer.layers[0].scale
+    raw = np.load("cropped.npy")
+    images = viewer.add_image(raw, channel_axis=0, scale=scale)
+    labels = viewer.add_labels(mask, name="labels", scale=scale)
+    self = CellFilterWidget(viewer, labels=labels, nuc_gfp=images[0], tf_stains=images[1:])
+    viewer.window.add_dock_widget(self)

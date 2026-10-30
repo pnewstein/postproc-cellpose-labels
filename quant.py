@@ -1,14 +1,6 @@
 from pathlib import Path
 
 
-import napari_scripts as ns
-
-viewer = ns.get_viewer_from_file(
-    Path(
-        "/Volumes/DoeLab65TB/lab_member_data/Kasey Drake/Fer2/Fer2 mutant [e]/2026-10-28/NewFer2mutant[e] 555Dbx -01.czi"
-    ),
-    0,
-)
 
 import numpy as np
 import napari
@@ -81,6 +73,7 @@ def max_opening_erosion(radius: float, image_layer: Image) -> pl.DataFrame:
     returns a Polars dataframe with columns "label", "z", "y", "x", "max_intensity"
     (z, y, x in voxel coordinates; label is an index column)
     """
+    image_layer.data = image_layer.data.flatten()
     img = np.asarray(image_layer.data, dtype=np.float32)
     scale = np.asarray(image_layer.scale[-3:], dtype=float)
 
@@ -91,7 +84,7 @@ def max_opening_erosion(radius: float, image_layer: Image) -> pl.DataFrame:
 
     opened = ndi.grey_opening(img, footprint=footprint)
     smoothed = ndi.gaussian_filter(opened, sigma=radius / 2 * scale.min() / scale)
-    viewer.add_image(smoothed, scale=scale)
+    viewer.add_image(smoothed, scale=scale, translate=image_layer.translate)
 
     peaks = peak_local_max(smoothed, footprint=footprint, exclude_border=False)
 
@@ -112,6 +105,7 @@ def add_points(viewer, df, thresh):
         df[["z", "y", "x"]].to_numpy(),
         name="points",
         scale=viewer.layers[0].scale,
+        translate=viewer.layers[0].translate
         size=5,
         face_color="transparent",
         border_color="red",

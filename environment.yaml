@@ -1,0 +1,19 @@
+name: cpproc
+
+channels:
+  - conda-forge
+
+dependencies:
+  - python=3.12
+  - numpy
+  - polars
+  - scipy
+  - scikit-image
+  - pyqt
+  - pip
+  - napari==0.8.0
+  - aicspylibczi
+  - pyclesperanto
+  - ocl_icd_wrapper_apple
+  - pip:
+      - git+https://github.com/pnewstein/napari-scripts.git
