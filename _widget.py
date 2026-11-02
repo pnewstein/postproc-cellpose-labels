@@ -311,4 +311,8 @@ def load_mask_file(path: Path, fluor="AF488"):
     labels = viewer.add_labels(mask, name="labels", scale=scale)
     self = CellFilterWidget(viewer, labels=labels, nuc_gfp=images[f"raw-{fluor}-channel"], tf_stains=images)
     viewer.window.add_dock_widget(self)
-    return self.local_df.select("z", "y", "x", "type").rename({"type": "cell_type"})
+    return self
+
+def save_file(wing, path):
+    wing.local_df.select("z", "y", "x", "type").rename({"type": "cell_type"}).write_csv(path)
+
