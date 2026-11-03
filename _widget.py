@@ -121,7 +121,9 @@ class CellFilterWidget(QWidget):
         self.viewer, self.radius = viewer, radius
         self.tf_stains = dict(zip(stain_defaults, tf_stains))
         self.criteria = [
-            c for c in df.columns if c not in stain_defaults and c not in ZYX + ["label"]
+            c
+            for c in df.columns
+            if c not in stain_defaults and c not in ZYX + ["label"]
         ]
         self.df = df.with_columns(
             pl.struct(ZYX).alias("pos"),
@@ -306,13 +308,24 @@ def load_mask_file(path: Path, fluor="AF488"):
     mac_path = Path("/Volumes/DoeLab65TB/") / Path(*czi_path.parts[3:])
     scene = out["scene"].item()
     viewer = ns.get_viewer_from_file(mac_path, scene)
-    images = viewer.layers
+    images = viewer.layers.copy()
     scale = viewer.layers[0].scale
     labels = viewer.add_labels(mask, name="labels", scale=scale)
-    self = CellFilterWidget(viewer, labels=labels, nuc_gfp=images[f"raw-{fluor}-channel"], tf_stains=images)
+    try:
+        nuc_gfp = images[fluor]
+    except KeyError:
+        nuc_gfp = images[f"raw-{fluor}-channel"]
+    self = CellFilterWidget(
+        viewer,
+        labels=labels,
+        nuc_gfp=nuc_gfp,
+        tf_stains=[i for i in images if i is not nuc_gfp],
+    )
     viewer.window.add_dock_widget(self)
     return self
 
-def save_file(wing, path):
-    wing.local_df.select("z", "y", "x", "type").rename({"type": "cell_type"}).write_csv(path)
 
+def save_file(wing, path):
+    wing.local_df.select("z", "y", "x", "type").rename({"type": "cell_type"}).write_csv(
+        path
+    )
