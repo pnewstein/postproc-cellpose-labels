@@ -190,7 +190,7 @@ class CellFilterWidget(QWidget):
         value, lo, hi = float(value), float(lo), float(hi)
         sb = QDoubleSpinBox()
         sb.setDecimals(4)
-        sb.setRange(lo, hi)
+        sb.setRange(0, hi + 1)
         sb.setSingleStep((hi - lo) / 100 or 1.0)
         sb.setValue(value)
         sb.valueChanged.connect(self.refresh)
@@ -299,6 +299,47 @@ class CellFilterWidget(QWidget):
         )
         if path:
             self.local_df.drop("_id", "type").write_csv(path)
+
+    def import_csv(self, path: Path):
+        df = pl.read_csv(path)
+        df = df.with_columns(pl.struct(ZYX).alias("pos"))
+        # delete missing
+        self.df = self.df.filter(pl.col("pos").is_in(df["pos"].to_list()))
+        # add added
+        new_points = df.filter(~pl.col("pos").is_in(self.df["pos"].to_list()))
+        new_coords = new_points.select(*ZYX).to_numpy()
+        columns = []
+        for new in new_coords:
+            mean = self.measure(new)
+            to_add = {c: None for c in self.df.columns}
+            to_add["z"], to_add["y"], to_add["x"] = new
+            to_add["type"] = (
+                "+".join(s for s, v in mean.items() if v >= self.thr[s].value())
+                or "none"
+            )
+            to_add["manual"] = True
+            columns.append(to_add)
+        ta_df = pl.DataFrame(columns).with_columns(pl.struct(ZYX).alias("pos"))
+        self.measure(new_coords[0])
+        self.df = pl.concat([self.df, ta_df])
+        # Set thresholds
+        split_df = df.with_columns(pl.col("cell_type").str.split("+"))
+        markers = set(split_df["cell_type"].explode())
+        markers.discard("none")
+        pos_to_markers = split_df.select(
+            ["pos"] + [pl.col("cell_type").list.contains(m).alias(m) for m in markers]
+        )
+        self.refresh()
+        full_df = self.local_df.join(pos_to_markers, on="pos")
+        for name, wi in self.thr.items():
+            if name + "_right" not in full_df.columns:
+                wi.setValue(wi.maximum())
+                continue
+            thresh = (
+                full_df.filter(pl.col(name + "_right"))[name].min()
+                + full_df.filter(~pl.col(name + "_right"))[name].max()
+            ) / 2
+            wi.setValue(thresh)
 
 
 def load_mask_file(path: Path, fluor="AF488"):
